@@ -1,0 +1,70 @@
+\hypertarget{structCommandHolder}{}\doxysection{Command\+Holder Struct Reference}
+\label{structCommandHolder}\index{CommandHolder@{CommandHolder}}
+
+
+Contains information about the properties of the command.  
+
+
+
+
+{\ttfamily \#include $<$command.\+h$>$}
+
+\doxysubsection*{Public Attributes}
+\begin{DoxyCompactItemize}
+\item 
+char $\ast$ \mbox{\hyperlink{structCommandHolder_a3691bd22096644e8c6be327fc7d0d246}{redirect\+\_\+in}}
+\item 
+char $\ast$ \mbox{\hyperlink{structCommandHolder_ac7bfc3e78a8e8b511e2b324c45a17d6f}{redirect\+\_\+out}}
+\item 
+char \mbox{\hyperlink{structCommandHolder_acb381d6ab29bc574dc1ff452adc7847a}{flags}}
+\item 
+\mbox{\hyperlink{unionCommand}{Command}} \mbox{\hyperlink{structCommandHolder_a83a7e82024a6f736ffebed0792aa12a9}{cmd}}
+\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+Contains information about the properties of the command. 
+
+\begin{DoxySeeAlso}{See also}
+\mbox{\hyperlink{command_8h_ab6714acca9cb634f10b7f5a23c349e3e}{R\+E\+D\+I\+R\+E\+C\+T\+\_\+\+IN}}, \mbox{\hyperlink{command_8h_af178f598332c2233dfbdc334a05a2a66}{R\+E\+D\+I\+R\+E\+C\+T\+\_\+\+O\+UT}}, \mbox{\hyperlink{command_8h_a6b682fe2ba1a0c489d50822c3feecdac}{R\+E\+D\+I\+R\+E\+C\+T\+\_\+\+A\+P\+P\+E\+ND}}, \mbox{\hyperlink{command_8h_a3fc15bc38c2cd3ce6f7dd40f4c0115dd}{P\+I\+P\+E\+\_\+\+IN}}, \mbox{\hyperlink{command_8h_af2aa1b20c10d6507c47f11588e21c324}{P\+I\+P\+E\+\_\+\+O\+UT}}, \mbox{\hyperlink{command_8h_a850b2f07a67b73890889e63fb8a49fda}{B\+A\+C\+K\+G\+R\+O\+U\+ND}}, \mbox{\hyperlink{unionCommand}{Command}} 
+\end{DoxySeeAlso}
+
+
+\doxysubsection{Member Data Documentation}
+\mbox{\Hypertarget{structCommandHolder_a83a7e82024a6f736ffebed0792aa12a9}\label{structCommandHolder_a83a7e82024a6f736ffebed0792aa12a9}} 
+\index{CommandHolder@{CommandHolder}!cmd@{cmd}}
+\index{cmd@{cmd}!CommandHolder@{CommandHolder}}
+\doxysubsubsection{\texorpdfstring{cmd}{cmd}}
+{\footnotesize\ttfamily \mbox{\hyperlink{unionCommand}{Command}} Command\+Holder\+::cmd}
+
+A {\itshape \mbox{\hyperlink{unionCommand}{Command}}} to hold \mbox{\Hypertarget{structCommandHolder_acb381d6ab29bc574dc1ff452adc7847a}\label{structCommandHolder_acb381d6ab29bc574dc1ff452adc7847a}} 
+\index{CommandHolder@{CommandHolder}!flags@{flags}}
+\index{flags@{flags}!CommandHolder@{CommandHolder}}
+\doxysubsubsection{\texorpdfstring{flags}{flags}}
+{\footnotesize\ttfamily char Command\+Holder\+::flags}
+
+A set of bits that hold information about how to execute the command. The properties can be extracted from the flags field by using a bit-\/wise \& (i.\+e. flags \& {\itshape P\+I\+P\+E\+\_\+\+IN}) are macro defined as\+:
+\begin{DoxyItemize}
+\item {\itshape R\+E\+D\+I\+R\+E\+C\+T\+\_\+\+IN} 
+\item {\itshape R\+E\+D\+I\+R\+E\+C\+T\+\_\+\+O\+UT} 
+\item {\itshape R\+E\+D\+I\+R\+E\+C\+T\+\_\+\+A\+P\+P\+E\+ND} 
+\item {\itshape P\+I\+P\+E\+\_\+\+IN} 
+\item {\itshape P\+I\+P\+E\+\_\+\+O\+UT} 
+\item {\itshape B\+A\+C\+K\+G\+R\+O\+U\+ND} 
+\end{DoxyItemize}\mbox{\Hypertarget{structCommandHolder_a3691bd22096644e8c6be327fc7d0d246}\label{structCommandHolder_a3691bd22096644e8c6be327fc7d0d246}} 
+\index{CommandHolder@{CommandHolder}!redirect\_in@{redirect\_in}}
+\index{redirect\_in@{redirect\_in}!CommandHolder@{CommandHolder}}
+\doxysubsubsection{\texorpdfstring{redirect\_in}{redirect\_in}}
+{\footnotesize\ttfamily char$\ast$ Command\+Holder\+::redirect\+\_\+in}
+
+\mbox{\hyperlink{structRedirect}{Redirect}} standard in of this command to a file name {\itshape redirect\+\_\+in} \mbox{\Hypertarget{structCommandHolder_ac7bfc3e78a8e8b511e2b324c45a17d6f}\label{structCommandHolder_ac7bfc3e78a8e8b511e2b324c45a17d6f}} 
+\index{CommandHolder@{CommandHolder}!redirect\_out@{redirect\_out}}
+\index{redirect\_out@{redirect\_out}!CommandHolder@{CommandHolder}}
+\doxysubsubsection{\texorpdfstring{redirect\_out}{redirect\_out}}
+{\footnotesize\ttfamily char$\ast$ Command\+Holder\+::redirect\+\_\+out}
+
+\mbox{\hyperlink{structRedirect}{Redirect}} standard out of this command to a file name {\itshape redirect\+\_\+out} 
+
+The documentation for this struct was generated from the following file\+:\begin{DoxyCompactItemize}
+\item 
+src/\mbox{\hyperlink{command_8h}{command.\+h}}\end{DoxyCompactItemize}
