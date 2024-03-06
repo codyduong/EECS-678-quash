@@ -26,6 +26,7 @@
 
 // Return a string containing the current working directory.
 char* get_current_directory(bool* should_free) {
+<<<<<<< Updated upstream
   *should_free = false;
   char cwd[1024];
   if (getcwd(cwd, sizeof(cwd)) != NULL) {
@@ -33,6 +34,17 @@ char* get_current_directory(bool* should_free) {
     return strdup(cwd);
   } 
   return "getcwd() error";
+=======
+  // TODO: Get the current working directory. This will fix the prompt path.
+  // HINT: This should be pretty simple
+  // IMPLEMENT_ME();
+  char* directory = getcwd(NULL, 1024);
+
+  // Change this to true if necessary
+  *should_free = false;
+
+  return directory;
+>>>>>>> Stashed changes
 }
 
 // Returns the value of an environment variable env_var
@@ -41,12 +53,12 @@ const char* lookup_env(const char* env_var) {
   // to interpret variables from the command line and display the prompt
   // correctly
   // HINT: This should be pretty simple
-  IMPLEMENT_ME();
+  // IMPLEMENT_ME();
 
   // TODO: Remove warning silencers
-  (void) env_var; // Silence unused variable warning
+  // (void) env_var; // Silence unused variable warning
 
-  return "???";
+  return getenv(env_var);
 }
 
 // Check the status of background jobs
@@ -92,11 +104,12 @@ void run_generic(GenericCommand cmd) {
   char** args = cmd.args;
 
   // TODO: Remove warning silencers
-  (void) exec; // Silence unused variable warning
-  (void) args; // Silence unused variable warning
+  // (void) exec; // Silence unused variable warning
+  // (void) args; // Silence unused variable warning
 
   // TODO: Implement run generic
-  IMPLEMENT_ME();
+  // IMPLEMENT_ME();
+  execvp(exec, args);
 
   perror("ERROR: Failed to execute program");
 }
@@ -108,12 +121,16 @@ void run_echo(EchoCommand cmd) {
   char** str = cmd.args;
 
   // TODO: Remove warning silencers
-  (void) str; // Silence unused variable warning
+  // (void) str; // Silence unused variable warning
 
   // TODO: Implement echo
-  IMPLEMENT_ME();
+  // IMPLEMENT_ME();
+  for (int i = 0; str[i] != NULL; i++) {
+    printf("%s ", str[i]);
+  }
 
   // Flush the buffer before returning
+  printf("\n");
   fflush(stdout);
 }
 
@@ -124,31 +141,46 @@ void run_export(ExportCommand cmd) {
   const char* val = cmd.val;
 
   // TODO: Remove warning silencers
-  (void) env_var; // Silence unused variable warning
-  (void) val;     // Silence unused variable warning
+  // (void) env_var; // Silence unused variable warning
+  // (void) val;     // Silence unused variable warning
 
   // TODO: Implement export.
   // HINT: This should be quite simple.
-  IMPLEMENT_ME();
+  // IMPLEMENT_ME();
+  setenv(env_var, val, 1);
 }
 
 // Changes the current working directory
 void run_cd(CDCommand cmd) {
   // Get the directory name
   const char* dir = cmd.dir;
+  char* old_dir;
+  char* new_dir;
 
   // Check if the directory is valid
   if (dir == NULL) {
     perror("ERROR: Failed to resolve path");
     return;
   }
+  
+  old_dir = getcwd(NULL, 1024);
 
   // TODO: Change directory
+
+  chdir(dir);
 
   // TODO: Update the PWD environment variable to be the new current working
   // directory and optionally update OLD_PWD environment variable to be the old
   // working directory.
-  IMPLEMENT_ME();
+  // IMPLEMENT_ME();
+
+  new_dir = getcwd(NULL, 1024);
+
+  setenv("PWD", new_dir, 1);
+  setenv("OLD_PWD", old_dir, 1);
+
+  free(old_dir);
+  free(new_dir);
 }
 
 // Sends a signal to all processes contained in a job
