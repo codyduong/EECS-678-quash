@@ -18,6 +18,10 @@
 #include "parsing_interface.h"
 #include "memory_pool.h"
 
+#include "job_queue.h"
+IMPLEMENT_DEQUE(JobQueue, Job);
+JobQueue job_queue;
+
 /**************************************************************************
  * Private Variables
  **************************************************************************/
@@ -55,6 +59,10 @@ QuashState initial_state() {
     isatty(STDIN_FILENO),
     NULL
   };
+}
+
+static void destroyJobQueueAtExit() {
+  destroy_JobQueue(&job_queue);
 }
 
 /**************************************************************************
@@ -98,8 +106,11 @@ int main(int argc, char** argv) {
     fflush(stdout);
   }
 
+  job_queue = new_JobQueue(1024);
+
   atexit(destroy_parser);
   atexit(destroy_memory_pool);
+  atexit(destroyJobQueueAtExit);
 
   // Main execution loop
   while (is_running()) {

@@ -1,1 +1,3 @@
 *.o
+quash
+test-cases/t*/

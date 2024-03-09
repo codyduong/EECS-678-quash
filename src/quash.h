@@ -11,8 +11,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "execute.h"
-
 /**
  * @brief Holds information about the state and environment Quash is running in
  */

@@ -8,10 +8,20 @@
  */
 
 #include "execute.h"
-
 #include <stdio.h>
-
 #include "quash.h"
+#include <string.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+#include "job_queue.h"
+extern JobQueue job_queue;
+
+// Use DEQUE instead...
+// Job* job_queue[MAX_JOBS];
+// int num_jobs = 0;
+int job_id = 0;
 
 // Remove this and all expansion calls to it
 /**
@@ -43,13 +53,23 @@ const char* lookup_env(const char* env_var) {
 
 // Check the status of background jobs
 void check_jobs_bg_status() {
-  // TODO: Check on the statuses of all processes belonging to all background
-  // jobs. This function should remove jobs from the jobs queue once all
-  // processes belonging to a job have completed.
-  IMPLEMENT_ME();
+  int status;
 
-  // TODO: Once jobs are implemented, uncomment and fill the following line
-  // print_job_bg_complete(job_id, pid, cmd);
+  for (int i = 0; i < length_JobQueue(&job_queue); ++i) {
+    Job job = peek_front_JobQueue(&job_queue);
+
+    waitpid(job.pids[0], &status, WNOHANG);
+
+    if (WIFEXITED(status) || WIFSIGNALED(status)) {
+      print_job_bg_complete(job.job_id, job.pids[0], get_command_string(job.cmd));
+      pop_front_JobQueue(&job_queue);
+      free(job.pids);
+    } else {
+      // Prioritize checking newer unchecked jobs before older checked jobs
+      push_back_JobQueue(&job_queue, job);
+      pop_front_JobQueue(&job_queue);
+    }
+  }
 }
 
 // Prints the job id number, the process id of the first process belonging to
@@ -83,12 +103,6 @@ void run_generic(GenericCommand cmd) {
   char* exec = cmd.args[0];
   char** args = cmd.args;
 
-  // TODO: Remove warning silencers
-  // (void) exec; // Silence unused variable warning
-  // (void) args; // Silence unused variable warning
-
-  // TODO: Implement run generic
-  // IMPLEMENT_ME();
   execvp(exec, args);
 
   perror("ERROR: Failed to execute program");
@@ -100,11 +114,6 @@ void run_echo(EchoCommand cmd) {
   // string is always NULL) list of strings.
   char** str = cmd.args;
 
-  // TODO: Remove warning silencers
-  // (void) str; // Silence unused variable warning
-
-  // TODO: Implement echo
-  // IMPLEMENT_ME();
   for (int i = 0; str[i] != NULL; i++) {
     printf("%s ", str[i]);
   }
@@ -120,13 +129,6 @@ void run_export(ExportCommand cmd) {
   const char* env_var = cmd.env_var;
   const char* val = cmd.val;
 
-  // TODO: Remove warning silencers
-  // (void) env_var; // Silence unused variable warning
-  // (void) val;     // Silence unused variable warning
-
-  // TODO: Implement export.
-  // HINT: This should be quite simple.
-  // IMPLEMENT_ME();
   setenv(env_var, val, 1);
 }
 
@@ -145,14 +147,7 @@ void run_cd(CDCommand cmd) {
   
   old_dir = getcwd(NULL, 1024);
 
-  // TODO: Change directory
-
   chdir(dir);
-
-  // TODO: Update the PWD environment variable to be the new current working
-  // directory and optionally update OLD_PWD environment variable to be the old
-  // working directory.
-  // IMPLEMENT_ME();
 
   new_dir = getcwd(NULL, 1024);
 
@@ -167,13 +162,38 @@ void run_cd(CDCommand cmd) {
 void run_kill(KillCommand cmd) {
   int signal = cmd.sig;
   int job_id = cmd.job;
+  bool found = false;
 
-  // TODO: Remove warning silencers
-  (void) signal; // Silence unused variable warning
-  (void) job_id; // Silence unused variable warning
+  JobQueue temp_queue = new_JobQueue(1024);
 
-  // TODO: Kill all processes associated with a background job
-  IMPLEMENT_ME();
+  while (!is_empty_JobQueue(&job_queue)) {
+    Job job = pop_front_JobQueue(&job_queue);
+
+    if (job.job_id == job_id)
+    {
+      for (int i = 0; i < job.num_pids; ++i)
+      {
+        kill(job.pids[i], signal);
+      }
+      printf("Signal %d sent to job %d\n", signal, job_id);
+      found = true;
+    }
+
+    push_back_JobQueue(&temp_queue, job);
+  }
+
+  // Restore jobs back to the main queue
+  while (!is_empty_JobQueue(&temp_queue)) {
+    push_back_JobQueue(&job_queue, pop_front_JobQueue(&temp_queue));
+  }
+
+  destroy_JobQueue(&temp_queue);
+
+  if (!found) {
+    printf("Job %d not found.\n", job_id);
+  }
+
+  fflush(stdout);
 }
 
 
@@ -188,8 +208,12 @@ void run_pwd() {
 
 // Prints all background jobs currently in the job list to stdout
 void run_jobs() {
-  // TODO: Print background jobs
-  IMPLEMENT_ME();
+  size_t length = length_JobQueue(&job_queue);
+  Job* jobs = as_array_JobQueue(&job_queue, &length);
+  for (int i = 0; i < length; ++i) {
+    Job job = jobs[i];
+    printf("[%d] %s\n", job.job_id, get_command_string(job.cmd));
+  }
 
   // Flush the buffer before returning
   fflush(stdout);
@@ -282,6 +306,8 @@ void parent_run_command(Command cmd) {
   }
 }
 
+int prev_pipe_read_end = -1;
+
 /**
  * @brief Creates one new process centered around the @a Command in the @a
  * CommandHolder setting up redirects and pipes where needed
@@ -297,7 +323,7 @@ void parent_run_command(Command cmd) {
  *
  * @sa Command CommandHolder
  */
-void create_process(CommandHolder holder) {
+pid_t create_process(CommandHolder holder) {
   // Read the flags field from the parser
   bool p_in  = holder.flags & PIPE_IN;
   bool p_out = holder.flags & PIPE_OUT;
@@ -306,19 +332,91 @@ void create_process(CommandHolder holder) {
   bool r_app = holder.flags & REDIRECT_APPEND; // This can only be true if r_out
                                                // is true
 
-  // TODO: Remove warning silencers
-  (void) p_in;  // Silence unused variable warning
-  (void) p_out; // Silence unused variable warning
-  (void) r_in;  // Silence unused variable warning
-  (void) r_out; // Silence unused variable warning
-  (void) r_app; // Silence unused variable warning
+  pid_t pid;
+  int pipefd[2]; // Use for PIPE_OUT scenario
 
-  // TODO: Setup pipes, redirects, and new process
-  IMPLEMENT_ME();
+  // Setup pipes
+  if (p_out) {
+    if (pipe(pipefd) < 0)
+    {
+      perror("pipe");
+      exit(EXIT_FAILURE);
+    }
+  }
 
-  //parent_run_command(holder.cmd); // This should be done in the parent branch of
-                                  // a fork
-  //child_run_command(holder.cmd); // This should be done in the child branch of a fork
+  pid = fork();
+
+  if (pid < 0) {
+    perror("fork");
+    exit(EXIT_FAILURE);
+  }
+  else if (pid != 0) {
+    // Parent
+    if (p_in && prev_pipe_read_end != -1) {
+      close(prev_pipe_read_end);
+    }
+
+    if (p_out) {
+      prev_pipe_read_end = pipefd[0];
+      close(pipefd[1]);
+    } else {
+      prev_pipe_read_end = -1;
+    }
+
+    if (!(holder.flags & BACKGROUND)) {
+      int status;
+      waitpid(pid, &status, 0);
+    }
+  }
+  else {
+    // Child
+    if (r_in) {
+      int fd_in = open(holder.redirect_in, O_RDONLY);
+      if (fd_in < 0)
+      {
+        perror("open redirect_in");
+        exit(EXIT_FAILURE);
+      }
+      dup2(fd_in, STDIN_FILENO);
+      close(fd_in);
+    }
+
+    if (r_out) {
+      int fd_out;
+      if (r_app) {
+        fd_out = open(holder.redirect_out, O_WRONLY | O_CREAT | O_APPEND, 0644);
+      }
+      else {
+        fd_out = open(holder.redirect_out, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+      }
+      if (fd_out < 0) {
+        perror("open redirect_out");
+        exit(EXIT_FAILURE);
+      }
+      dup2(fd_out, STDOUT_FILENO);
+      close(fd_out);
+    }
+
+    if (p_in && prev_pipe_read_end != -1) {
+      dup2(prev_pipe_read_end, STDIN_FILENO);
+      close(prev_pipe_read_end);
+    }
+
+    if (p_out) {
+      dup2(pipefd[1], STDOUT_FILENO);
+      close(pipefd[0]);
+      close(pipefd[1]);
+    }
+
+    child_run_command(holder.cmd);
+    exit(EXIT_FAILURE);
+  }
+
+  return pid;
+}
+
+static void destroyJobQueueAtExit() {
+  destroy_JobQueue(&job_queue);
 }
 
 // Run a list of commands
@@ -335,22 +433,32 @@ void run_script(CommandHolder* holders) {
   }
 
   CommandType type;
+  pid_t last_pid;
+  int job_id = 0;
 
   // Run all commands in the `holder` array
-  for (int i = 0; (type = get_command_holder_type(holders[i])) != EOC; ++i)
-    create_process(holders[i]);
+  for (int i = 0; (type = get_command_holder_type(holders[i])) != EOC; ++i) {
+    last_pid = create_process(holders[i]);
+    job_id++;
+  }
 
   if (!(holders[0].flags & BACKGROUND)) {
     // Not a background Job
-    // TODO: Wait for all processes under the job to complete
-    IMPLEMENT_ME();
+
+    // Note we don't actually queue foreground jobs into the job_queue at all... W/E
+    waitpid(last_pid, 0, 0);
   }
   else {
     // A background job.
-    // TODO: Push the new job to the job queue
-    IMPLEMENT_ME();
+    Job job;
+    job.pids = malloc(sizeof(pid_t));
+    job.pids[0] = last_pid;
+    job.cmd = holders[0].cmd;
+    job.job_id = ++job_id;
+    
+    push_back_JobQueue(&job_queue, job);
+    // job_queue[num_jobs++] = job;
 
-    // TODO: Once jobs are implemented, uncomment and fill the following line
-    // print_job_bg_start(job_id, pid, cmd);
+    print_job_bg_start(job.job_id, job.pids[0], get_command_string(job.cmd));
   }
 }
