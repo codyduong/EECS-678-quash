@@ -1,3 +1,4 @@
 *.o
 quash
 test-cases/t*/
+results.txt
