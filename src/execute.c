@@ -37,15 +37,7 @@ char* get_current_directory(bool* should_free) {
 
 // Returns the value of an environment variable env_var
 const char* lookup_env(const char* env_var) {
-  // TODO: Lookup environment variables. This is required for parser to be able
-  // to interpret variables from the command line and display the prompt
-  // correctly
-  // HINT: This should be pretty simple
-  // IMPLEMENT_ME();
-
-  // TODO: Remove warning silencers
-  // (void) env_var; // Silence unused variable warning
-
+  if (env_var == NULL) return NULL;
   return getenv(env_var);
 }
 
