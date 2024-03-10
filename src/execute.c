@@ -14,6 +14,7 @@
 #include <sys/wait.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "job_queue.h"
 extern JobQueue job_queue;
@@ -213,6 +214,7 @@ void run_pwd() {
   if (cwd != NULL) {
     printf("%s\n", cwd);
   } else {
+    free(cwd);
     perror("getcwd() error");
   }
 
