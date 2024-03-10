@@ -9,5 +9,7 @@ typedef struct {
   char* cmd_str;
 } Job;
 
+void free_job(Job j);
+
 IMPLEMENT_DEQUE_STRUCT(JobQueue, Job);
 PROTOTYPE_DEQUE(JobQueue, Job)

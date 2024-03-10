@@ -61,8 +61,11 @@ QuashState initial_state() {
   };
 }
 
+// GOOD CODING 😂 - @codyduong
+static bool destroyed_job_queue = false;
+
 static void destroy_job_queue() {
-  if (job_queue.data != NULL) {
+  if (!destroyed_job_queue) {
     destroy_JobQueue(&job_queue);
   }
 }
@@ -108,7 +111,7 @@ int main(int argc, char** argv) {
     fflush(stdout);
   }
 
-  job_queue = new_JobQueue(1024);
+  job_queue = new_destructable_JobQueue(1024, free_job);
 
   atexit(destroy_parser);
   atexit(destroy_memory_pool);
@@ -135,6 +138,8 @@ int main(int argc, char** argv) {
 
     destroy_memory_pool();
   }
+
+  destroy_job_queue();
 
   return EXIT_SUCCESS;
 }

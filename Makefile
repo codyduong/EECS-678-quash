@@ -13,7 +13,7 @@ CFLAGS = -Wall -g
 ####################################################################
 # NOTE: The submission scripts assume all files in `CFILELIST` end with
 # .c and all files in `HFILES` end in .h
-CFILELIST = quash.c command.c execute.c parsing/memory_pool.c parsing/parsing_interface.c parsing/parse.tab.c parsing/lex.yy.c
+CFILELIST = quash.c command.c execute.c parsing/memory_pool.c parsing/parsing_interface.c parsing/parse.tab.c parsing/lex.yy.c job_queue.c
 HFILELIST = quash.h command.h execute.h parsing/memory_pool.h parsing/parsing_interface.h parsing/parse.tab.h deque.h debug.h job_queue.h
 
 # Add libraries that need linked as needed (e.g. -lm -lpthread)
