@@ -17,10 +17,6 @@
 
 #include "job_queue.h"
 extern JobQueue job_queue;
-
-// Use DEQUE instead...
-// Job* job_queue[MAX_JOBS];
-// int num_jobs = 0;
 int job_id = 0;
 
 // Remove this and all expansion calls to it
@@ -54,22 +50,29 @@ const char* lookup_env(const char* env_var) {
 // Check the status of background jobs
 void check_jobs_bg_status() {
   int status;
+  
+  JobQueue temp_queue = new_JobQueue(1024);
 
-  for (int i = 0; i < length_JobQueue(&job_queue); ++i) {
-    Job job = peek_front_JobQueue(&job_queue);
+  while (!is_empty_JobQueue(&job_queue)) {
+    Job job = pop_front_JobQueue(&job_queue);
+    push_back_JobQueue(&temp_queue, job);
 
-    waitpid(job.pids[0], &status, WNOHANG);
+    int wait_result = waitpid(job.pids[0], &status, WNOHANG);
 
-    if (WIFEXITED(status) || WIFSIGNALED(status)) {
-      print_job_bg_complete(job.job_id, job.pids[0], get_command_string(job.cmd));
-      pop_front_JobQueue(&job_queue);
-      free(job.pids);
-    } else {
-      // Prioritize checking newer unchecked jobs before older checked jobs
-      push_back_JobQueue(&job_queue, job);
-      pop_front_JobQueue(&job_queue);
+    if (wait_result > 0) {
+      if (WIFEXITED(status) || WIFSIGNALED(status)) {
+        print_job_bg_complete(job.job_id, job.pids[0], job.cmd_str);
+        pop_back_JobQueue(&temp_queue);
+        free(job.pids);
+      } else {
+        printf("Not complete for %s\n", job.cmd_str);
+      }
     }
   }
+
+  job_queue = temp_queue;
+  destroy_JobQueue(&temp_queue);
+  fflush(stdout);
 }
 
 // Prints the job id number, the process id of the first process belonging to
@@ -136,24 +139,24 @@ void run_export(ExportCommand cmd) {
 void run_cd(CDCommand cmd) {
   // Get the directory name
   const char* dir = cmd.dir;
-  char* old_dir;
-  char* new_dir;
-
-  // Check if the directory is valid
-  if (dir == NULL) {
-    perror("ERROR: Failed to resolve path");
+  
+  char* old_dir = getcwd(NULL, 0);
+  if (old_dir == NULL) {
+    perror("ERROR: Failed to get current directory");
     return;
   }
+  if (chdir(dir) == -1) {
+    perror("ERROR: Failed to change directory");
+    free(old_dir);
+    return;
+  }
+
+  char* new_dir = getcwd(NULL, 0);
+  if (setenv("PWD", new_dir, 1) == -1) 
+    perror("ERROR: Failed to set environment variable PWD");
+  if (setenv("OLD_PWD", old_dir, 1) == -1)
+    perror("ERROR: Failed to set environment variable OLD_PWD");
   
-  old_dir = getcwd(NULL, 1024);
-
-  chdir(dir);
-
-  new_dir = getcwd(NULL, 1024);
-
-  setenv("PWD", new_dir, 1);
-  setenv("OLD_PWD", old_dir, 1);
-
   free(old_dir);
   free(new_dir);
 }
@@ -175,7 +178,6 @@ void run_kill(KillCommand cmd) {
       {
         kill(job.pids[i], signal);
       }
-      printf("Signal %d sent to job %d\n", signal, job_id);
       found = true;
     }
 
@@ -199,10 +201,16 @@ void run_kill(KillCommand cmd) {
 
 // Prints the current working directory to stdout
 void run_pwd() {
-  // TODO: Print the current working directory
-  IMPLEMENT_ME();
+  char *cwd;
+  char buffer[1024];
+  cwd = getcwd(buffer, sizeof(buffer));
+  
+  if (cwd != NULL) {
+    printf("%s\n", cwd);
+  } else {
+    perror("getcwd() error");
+  }
 
-  // Flush the buffer before returning
   fflush(stdout);
 }
 
@@ -212,7 +220,7 @@ void run_jobs() {
   Job* jobs = as_array_JobQueue(&job_queue, &length);
   for (int i = 0; i < length; ++i) {
     Job job = jobs[i];
-    printf("[%d] %s\n", job.job_id, get_command_string(job.cmd));
+    print_job(job.job_id, job.pids[0], job.cmd_str);
   }
 
   // Flush the buffer before returning
@@ -349,8 +357,7 @@ pid_t create_process(CommandHolder holder) {
   if (pid < 0) {
     perror("fork");
     exit(EXIT_FAILURE);
-  }
-  else if (pid != 0) {
+  } else if (pid != 0) {
     // Parent
     if (p_in && prev_pipe_read_end != -1) {
       close(prev_pipe_read_end);
@@ -363,12 +370,13 @@ pid_t create_process(CommandHolder holder) {
       prev_pipe_read_end = -1;
     }
 
-    if (!(holder.flags & BACKGROUND)) {
-      int status;
-      waitpid(pid, &status, 0);
-    }
-  }
-  else {
+    // if (!(holder.flags & BACKGROUND)) {
+    //   int status;
+    //   waitpid(pid, &status, 0);
+    // }
+
+    parent_run_command(holder.cmd);
+  } else {
     // Child
     if (r_in) {
       int fd_in = open(holder.redirect_in, O_RDONLY);
@@ -409,14 +417,12 @@ pid_t create_process(CommandHolder holder) {
     }
 
     child_run_command(holder.cmd);
+
+    // The child should always exit, otherwise parent is stuck holding the bag
     exit(EXIT_FAILURE);
   }
 
   return pid;
-}
-
-static void destroyJobQueueAtExit() {
-  destroy_JobQueue(&job_queue);
 }
 
 // Run a list of commands
@@ -434,31 +440,31 @@ void run_script(CommandHolder* holders) {
 
   CommandType type;
   pid_t last_pid;
-  int job_id = 0;
+  Job job;
+  job.pids = malloc(sizeof(pid_t));
+  job.num_pids = 0;
 
   // Run all commands in the `holder` array
   for (int i = 0; (type = get_command_holder_type(holders[i])) != EOC; ++i) {
     last_pid = create_process(holders[i]);
-    job_id++;
+    job.pids[i] = last_pid;
+    job.num_pids++;
   }
 
   if (!(holders[0].flags & BACKGROUND)) {
     // Not a background Job
-
     // Note we don't actually queue foreground jobs into the job_queue at all... W/E
     waitpid(last_pid, 0, 0);
-  }
-  else {
+    free(job.pids);
+  } else {
     // A background job.
-    Job job;
-    job.pids = malloc(sizeof(pid_t));
     job.pids[0] = last_pid;
-    job.cmd = holders[0].cmd;
+    // job.cmd = holders[0].cmd;
+    // OK so the cmd struct data gets blown up in the child?? so just use a char* instead
+    job.cmd_str = get_command_string(holders[0].cmd);
     job.job_id = ++job_id;
     
     push_back_JobQueue(&job_queue, job);
-    // job_queue[num_jobs++] = job;
-
-    print_job_bg_start(job.job_id, job.pids[0], get_command_string(job.cmd));
+    print_job_bg_start(job.job_id, job.pids[0], job.cmd_str);
   }
 }

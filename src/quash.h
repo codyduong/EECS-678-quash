@@ -12,6 +12,15 @@
 #include <stdlib.h>
 
 /**
+ * OK this was really dumb to track down - @codyduong
+ * 
+ * For some reason our parsing_interface.h does not include the needed lookup_env, given the following rule:
+ * > You may not use or modify files in the src/parsing directory
+ * We will still include it via a roundabout way, since it depends on `quash.h`, go ahead and add it here...
+ */
+#include "execute.h"
+
+/**
  * @brief Holds information about the state and environment Quash is running in
  */
 typedef struct QuashState {

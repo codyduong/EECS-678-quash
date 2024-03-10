@@ -5,7 +5,8 @@ typedef struct {
   int job_id;
   pid_t* pids;
   int num_pids;
-  Command cmd;
+  // Command cmd;
+  char* cmd_str;
 } Job;
 
 IMPLEMENT_DEQUE_STRUCT(JobQueue, Job);

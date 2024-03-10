@@ -61,7 +61,7 @@ QuashState initial_state() {
   };
 }
 
-static void destroyJobQueueAtExit() {
+static void destroy_job_queue() {
   destroy_JobQueue(&job_queue);
 }
 
@@ -110,7 +110,7 @@ int main(int argc, char** argv) {
 
   atexit(destroy_parser);
   atexit(destroy_memory_pool);
-  atexit(destroyJobQueueAtExit);
+  atexit(destroy_job_queue);
 
   // Main execution loop
   while (is_running()) {
