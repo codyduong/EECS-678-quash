@@ -66,7 +66,7 @@ void check_jobs_bg_status() {
         // There is a memleak here despite my best ability, it is cleaned up at end since
         // it is still_reachable, but somehow `echo foo &` breaks this...
         // whatever, no points off -@codyduong
-        free_job(pop_back_JobQueue(&temp_queue));
+        pop_back_JobQueue(&temp_queue);
         free_job(job);
       }
     }

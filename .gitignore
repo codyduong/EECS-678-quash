@@ -2,3 +2,6 @@
 quash
 test-cases/t*/
 results.txt
+src/**/*.txt
+*-project1-quash
+*-project1-quash.zip
