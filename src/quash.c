@@ -61,13 +61,8 @@ QuashState initial_state() {
   };
 }
 
-// GOOD CODING 😂 - @codyduong
-static bool destroyed_job_queue = false;
-
 static void destroy_job_queue() {
-  if (!destroyed_job_queue) {
-    destroy_JobQueue(&job_queue);
-  }
+  destroy_JobQueue(&job_queue);
 }
 
 /**************************************************************************
