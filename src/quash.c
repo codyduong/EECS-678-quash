@@ -62,7 +62,9 @@ QuashState initial_state() {
 }
 
 static void destroy_job_queue() {
-  destroy_JobQueue(&job_queue);
+  if (job_queue.data != NULL) {
+    destroy_JobQueue(&job_queue);
+  }
 }
 
 /**************************************************************************

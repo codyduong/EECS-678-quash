@@ -64,13 +64,14 @@ void check_jobs_bg_status() {
         print_job_bg_complete(job.job_id, job.pids[0], job.cmd_str);
         pop_back_JobQueue(&temp_queue);
         free(job.pids);
-      } else {
-        printf("Not complete for %s\n", job.cmd_str);
       }
     }
   }
 
-  job_queue = temp_queue;
+  while (!is_empty_JobQueue(&temp_queue)) {
+    push_back_JobQueue(&job_queue, pop_front_JobQueue(&temp_queue));
+  }
+
   destroy_JobQueue(&temp_queue);
   fflush(stdout);
 }
@@ -440,23 +441,32 @@ void run_script(CommandHolder* holders) {
 
   CommandType type;
   pid_t last_pid;
-  Job job;
-  job.pids = malloc(sizeof(pid_t));
-  job.num_pids = 0;
 
-  // Run all commands in the `holder` array
-  for (int i = 0; (type = get_command_holder_type(holders[i])) != EOC; ++i) {
-    last_pid = create_process(holders[i]);
-    job.pids[i] = last_pid;
-    job.num_pids++;
-  }
-
+  // Yes we run commands in each branch rather than out here, I couldn't free 4 bytes on
+  // on the `jobs.pids` malloc after way too long, so I gave up.
+  // and it doesn't really matter that much for this case... - @codyduong
   if (!(holders[0].flags & BACKGROUND)) {
+    // Run all commands in the `holder` array
+    for (int i = 0; (type = get_command_holder_type(holders[i])) != EOC; ++i) {
+      last_pid = create_process(holders[i]);
+    }
+
     // Not a background Job
     // Note we don't actually queue foreground jobs into the job_queue at all... W/E
     waitpid(last_pid, 0, 0);
-    free(job.pids);
   } else {
+    pid_t last_pid;
+    Job job;
+    job.pids = malloc(sizeof(pid_t));
+    job.num_pids = 0;
+
+    // Run all commands in the `holder` array
+    for (int i = 0; (type = get_command_holder_type(holders[i])) != EOC; ++i) {
+      last_pid = create_process(holders[i]);
+      job.pids[i] = last_pid;
+      job.num_pids++;
+    }
+
     // A background job.
     job.pids[0] = last_pid;
     // job.cmd = holders[0].cmd;
